@@ -3,6 +3,23 @@ import { getServerSession } from 'next-auth';
 import { connectToDatabase } from '@/app/lib/db';
 import { ObjectId } from 'mongodb';
 
+// MongoDB задача интерфейс
+interface TaskDocument {
+  _id: ObjectId;
+  title: string;
+  description: string;
+  status: string;
+  priority: string;
+  dueDate?: Date;
+  assignee?: string;
+  projectIds?: string[];
+  isCompleted: boolean;
+  tags?: string[];
+  userId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // Получение всех задач пользователя
 export async function GET(req: NextRequest) {
   try {
@@ -23,7 +40,7 @@ export async function GET(req: NextRequest) {
       .toArray();
     
     // Преобразуем _id в id для фронтенда
-    const formattedTasks = tasks.map(task => ({
+    const formattedTasks = tasks.map((task: TaskDocument) => ({
       id: task._id.toString(),
       title: task.title,
       description: task.description,

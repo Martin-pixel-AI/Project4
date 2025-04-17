@@ -3,6 +3,18 @@ import { getServerSession } from 'next-auth';
 import { connectToDatabase } from '@/app/lib/db';
 import { ObjectId } from 'mongodb';
 
+// MongoDB проект интерфейс
+interface ProjectDocument {
+  _id: ObjectId;
+  name: string;
+  description: string;
+  color: string;
+  tasks?: string[];
+  createdAt: Date;
+  updatedAt: Date;
+  userId: string;
+}
+
 // Получение всех проектов пользователя
 export async function GET(req: NextRequest) {
   try {
@@ -23,7 +35,7 @@ export async function GET(req: NextRequest) {
       .toArray();
     
     // Преобразуем _id в id для фронтенда
-    const formattedProjects = projects.map(project => ({
+    const formattedProjects = projects.map((project: ProjectDocument) => ({
       id: project._id.toString(),
       name: project.name,
       description: project.description,
