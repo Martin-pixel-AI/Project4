@@ -3,6 +3,8 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcrypt';
 import { connectToDB } from '@/app/lib/db';
 import User from '@/app/models/user';
+import { JWT } from 'next-auth/jwt';
+import { Session } from 'next-auth';
 
 const handler = NextAuth({
   providers: [
@@ -57,9 +59,9 @@ const handler = NextAuth({
       }
       return token;
     },
-    async session({ session, token }) {
+    async session({ session, token }: { session: Session, token: JWT }) {
       if (token && session.user) {
-        session.user.id = token.id as string;
+        session.user.id = token.id;
       }
       return session;
     },
