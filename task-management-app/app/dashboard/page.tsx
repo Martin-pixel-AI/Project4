@@ -10,6 +10,7 @@ import {
   AlertCircle,
   Users
 } from 'lucide-react';
+import Link from 'next/link';
 
 // Компонент с контентом дашборда
 function DashboardContent() {
@@ -171,9 +172,9 @@ function DashboardContent() {
       <div className="mt-8">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-medium text-gray-900">Your Projects</h2>
-          <button className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">
+          <Link href="/dashboard/projects" className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">
             See All
-          </button>
+          </Link>
         </div>
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -221,9 +222,12 @@ function DashboardContent() {
 
               <div className="flex items-center justify-between mt-4 text-sm">
                 <span className="text-gray-500">{project.tasks} tasks</span>
-                <button className="font-medium text-blue-600 hover:text-blue-500">
+                <Link 
+                  href={`/dashboard/projects?project=${project.id}`} 
+                  className="font-medium text-blue-600 hover:text-blue-500"
+                >
                   View
-                </button>
+                </Link>
               </div>
             </div>
           ))}

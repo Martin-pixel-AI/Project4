@@ -1,51 +1,63 @@
-import mongoose from 'mongoose';
+import { MongoClient } from 'mongodb';
 
-// Определяем глобальный тип для кеширования соединения
-interface MongooseCache {
-  conn: typeof mongoose | null;
-  promise: Promise<typeof mongoose> | null;
+// Переменная для хранения экземпляра подключения
+let cachedClient: MongoClient | null = null;
+let cachedDb: any = null;
+
+// Получаем URI подключения из переменных окружения
+const uri = process.env.MONGODB_URI;
+
+if (!uri) {
+  throw new Error(
+    'Please define the MONGODB_URI environment variable'
+  );
 }
 
-// Объявляем глобальное свойство
-declare global {
-  var mongoose: MongooseCache | undefined;
+// Функция для подключения к MongoDB
+export async function connectToDatabase() {
+  // Если у нас уже есть подключение, возвращаем его
+  if (cachedClient && cachedDb) {
+    return { client: cachedClient, db: cachedDb };
+  }
+
+  // Создаем новое подключение
+  const client = new MongoClient(uri!);
+  await client.connect();
+  
+  // Извлекаем имя базы данных из URI
+  const dbName = new URL(uri!).pathname.substring(1);
+  const db = client.db(dbName);
+
+  // Кэшируем подключение
+  cachedClient = client;
+  cachedDb = db;
+
+  return { client, db };
 }
 
-// Создаем или получаем кеш
-const cached: MongooseCache = global.mongoose || { conn: null, promise: null };
-
-// Инициализируем глобальную переменную, если она не существует
-if (!global.mongoose) {
-  global.mongoose = cached;
+// Типы данных для коллекций
+export interface ProjectDocument {
+  _id: string;
+  name: string;
+  description?: string;
+  color?: string;
+  tasks: string[];
+  userId: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-export async function connectToDB(): Promise<typeof mongoose> {
-  // Если у нас уже есть соединение, возвращаем его
-  if (cached.conn) {
-    return cached.conn;
-  }
-
-  // Если у нас ещё нет промиса соединения, создаем его
-  if (!cached.promise) {
-    const MONGODB_URI = process.env.MONGODB_URI;
-
-    if (!MONGODB_URI) {
-      throw new Error('Please define the MONGODB_URI environment variable');
-    }
-
-    const opts = {
-      bufferCommands: false,
-    };
-
-    cached.promise = mongoose.connect(MONGODB_URI, opts);
-  }
-
-  try {
-    // Ожидаем установки соединения
-    cached.conn = await cached.promise;
-    return cached.conn;
-  } catch (e) {
-    cached.promise = null;
-    throw e;
-  }
+export interface TaskDocument {
+  _id: string;
+  title: string;
+  description?: string;
+  status: string;
+  priority: string;
+  dueDate?: Date;
+  assignee?: string;
+  projectIds: string[];
+  userId: string;
+  isCompleted: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 } 

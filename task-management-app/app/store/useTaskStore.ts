@@ -29,7 +29,8 @@ interface TaskState {
   
   // Actions
   fetchTasks: () => Promise<void>;
-  addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  fetchTaskById: (id: string) => Promise<Task | null>;
+  addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Task | null>;
   updateTask: (id: string, updates: Partial<Task>) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
   setTaskStatus: (id: string, status: TaskStatus) => Promise<void>;
@@ -50,13 +51,55 @@ const useTaskStore = create<TaskState>((set, get) => ({
       if (!response.ok) {
         throw new Error('Failed to fetch tasks');
       }
+      
       const data = await response.json();
-      set({ tasks: data, isLoading: false });
+      
+      // Преобразуем строки дат в объекты Date
+      const tasks = data.map((task: any) => ({
+        ...task,
+        dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
+        createdAt: new Date(task.createdAt),
+        updatedAt: new Date(task.updatedAt)
+      }));
+      
+      set({ tasks, isLoading: false });
     } catch (error) {
       set({ 
         error: error instanceof Error ? error.message : 'An unknown error occurred', 
         isLoading: false 
       });
+    }
+  },
+
+  // Fetch task by ID
+  fetchTaskById: async (id) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await fetch(`/api/tasks/${id}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch task');
+      }
+      
+      const task = await response.json();
+      
+      // Преобразуем строки дат в объекты Date
+      const formattedTask = {
+        ...task,
+        dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
+        createdAt: new Date(task.createdAt),
+        updatedAt: new Date(task.updatedAt)
+      };
+      
+      return formattedTask;
+    } catch (error) {
+      set({ 
+        error: error instanceof Error ? error.message : 'An unknown error occurred', 
+        isLoading: false 
+      });
+      return null;
+    } finally {
+      set({ isLoading: false });
     }
   },
 
@@ -77,15 +120,27 @@ const useTaskStore = create<TaskState>((set, get) => ({
       }
 
       const newTask = await response.json();
+      
+      // Преобразуем строки дат в объекты Date
+      const formattedTask = {
+        ...newTask,
+        dueDate: newTask.dueDate ? new Date(newTask.dueDate) : undefined,
+        createdAt: new Date(newTask.createdAt),
+        updatedAt: new Date(newTask.updatedAt)
+      };
+      
       set((state) => ({
-        tasks: [...state.tasks, newTask],
+        tasks: [...state.tasks, formattedTask],
         isLoading: false,
       }));
+      
+      return formattedTask;
     } catch (error) {
       set({ 
         error: error instanceof Error ? error.message : 'An unknown error occurred', 
         isLoading: false 
       });
+      return null;
     }
   },
 
@@ -106,8 +161,17 @@ const useTaskStore = create<TaskState>((set, get) => ({
       }
 
       const updatedTask = await response.json();
+      
+      // Преобразуем строки дат в объекты Date
+      const formattedTask = {
+        ...updatedTask,
+        dueDate: updatedTask.dueDate ? new Date(updatedTask.dueDate) : undefined,
+        createdAt: new Date(updatedTask.createdAt),
+        updatedAt: new Date(updatedTask.updatedAt)
+      };
+      
       set((state) => ({
-        tasks: state.tasks.map((task) => (task.id === id ? updatedTask : task)),
+        tasks: state.tasks.map((task) => (task.id === id ? formattedTask : task)),
         isLoading: false,
       }));
     } catch (error) {
