@@ -1,29 +1,31 @@
 import mongoose from 'mongoose';
 
-// Declare mongoose on global
+// Определяем глобальный тип для кеширования соединения
+interface MongooseCache {
+  conn: typeof mongoose | null;
+  promise: Promise<typeof mongoose> | null;
+}
+
+// Объявляем глобальное свойство
 declare global {
-  var mongoose: {
-    conn: typeof mongoose | null;
-    promise: Promise<typeof mongoose> | null;
-  };
+  var mongoose: MongooseCache | undefined;
 }
 
-// Cache to store the database connection
-let cached = global.mongoose;
+// Создаем или получаем кеш
+const cached: MongooseCache = global.mongoose || { conn: null, promise: null };
 
-// Initialize the cached value if it doesn't exist
-if (!cached) {
-  cached = global.mongoose = { conn: null, promise: null };
+// Инициализируем глобальную переменную, если она не существует
+if (!global.mongoose) {
+  global.mongoose = cached;
 }
 
-// Function to connect to the database
-export async function connectToDB() {
-  // If we already have a connection, return it
+export async function connectToDB(): Promise<typeof mongoose> {
+  // Если у нас уже есть соединение, возвращаем его
   if (cached.conn) {
     return cached.conn;
   }
 
-  // If there's no connection promise yet, create one
+  // Если у нас ещё нет промиса соединения, создаем его
   if (!cached.promise) {
     const MONGODB_URI = process.env.MONGODB_URI;
 
@@ -31,18 +33,19 @@ export async function connectToDB() {
       throw new Error('Please define the MONGODB_URI environment variable');
     }
 
-    // Set mongoose options
     const opts = {
       bufferCommands: false,
     };
 
-    // Connect to the database
-    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
-      return mongoose;
-    });
+    cached.promise = mongoose.connect(MONGODB_URI, opts);
   }
 
-  // Wait for the connection to be established
-  cached.conn = await cached.promise;
-  return cached.conn;
+  try {
+    // Ожидаем установки соединения
+    cached.conn = await cached.promise;
+    return cached.conn;
+  } catch (e) {
+    cached.promise = null;
+    throw e;
+  }
 } 

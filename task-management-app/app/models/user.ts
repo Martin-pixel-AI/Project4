@@ -1,4 +1,13 @@
-import mongoose, { Schema, models, model } from 'mongoose';
+import mongoose, { Schema, models, model, Document } from 'mongoose';
+
+// Интерфейс для типизации пользователя
+export interface IUser extends Document {
+  name: string;
+  email: string;
+  password: string;
+  image?: string;
+  workspaces: mongoose.Types.ObjectId[];
+}
 
 // Schema for the User model
 const userSchema = new Schema(
@@ -30,5 +39,5 @@ const userSchema = new Schema(
 );
 
 // Export the model, check if it's already defined to prevent model redefinition error
-const User = models.User || model('User', userSchema);
+const User = models.User || model<IUser>('User', userSchema);
 export default User; 
