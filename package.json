@@ -3,8 +3,11 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "install": "cd task-management-app && npm install --legacy-peer-deps",
-    "build": "cd task-management-app && npm run build",
+    "install": "npm install cross-env --no-save && cd task-management-app && npm install --legacy-peer-deps",
+    "build": "cross-env NODE_OPTIONS=--max-old-space-size=4096 cd task-management-app && npm run build",
     "start": "cd task-management-app && npm start"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3"
   }
 } 
