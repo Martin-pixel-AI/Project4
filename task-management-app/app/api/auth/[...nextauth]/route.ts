@@ -1,7 +1,7 @@
 import NextAuth from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcrypt';
-import { connectToDB } from '../../../lib/db';
+import { connectToDatabase } from '../../../lib/db';
 import User from '../../../models/user';
 import { JWT } from 'next-auth/jwt';
 import { Session } from 'next-auth';
@@ -20,37 +20,43 @@ const handler = NextAuth({
           throw new Error('Invalid credentials');
         }
 
-        await connectToDB();
+        try {
+          await connectToDatabase();
 
-        // Find user by email
-        const user = await User.findOne({ email: credentials.email });
+          // Find user by email
+          const user = await User.findOne({ email: credentials.email });
 
-        // Check if user exists and password matches
-        if (!user || !user.password) {
-          throw new Error('User not found');
+          // Check if user exists and password matches
+          if (!user || !user.password) {
+            throw new Error('User not found');
+          }
+
+          const isPasswordValid = await bcrypt.compare(
+            credentials.password,
+            user.password
+          );
+
+          if (!isPasswordValid) {
+            throw new Error('Invalid password');
+          }
+
+          return {
+            id: user._id.toString(),
+            name: user.name,
+            email: user.email,
+            image: user.image || '',
+          };
+        } catch (error) {
+          console.error('Auth error:', error);
+          throw new Error('Authentication failed');
         }
-
-        const isPasswordValid = await bcrypt.compare(
-          credentials.password,
-          user.password
-        );
-
-        if (!isPasswordValid) {
-          throw new Error('Invalid password');
-        }
-
-        return {
-          id: user._id.toString(),
-          name: user.name,
-          email: user.email,
-          image: user.image,
-        };
       },
     }),
     // Add more providers here as needed (Google, GitHub, etc.)
   ],
   session: {
     strategy: 'jwt',
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   callbacks: {
     async jwt({ token, user }) {
@@ -59,7 +65,7 @@ const handler = NextAuth({
       }
       return token;
     },
-    async session({ session, token }: { session: Session, token: JWT }) {
+    async session({ session, token }) {
       if (token && session.user) {
         session.user.id = token.id;
       }

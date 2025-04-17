@@ -1,59 +1,75 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import bcrypt from 'bcrypt';
-import { connectToDB } from '../../../lib/db';
+import { connectToDatabase } from '../../../lib/db';
 import User from '../../../models/user';
 
-export async function POST(request: Request) {
-  try {
-    // Parse request body
-    const { name, email, password } = await request.json();
+const userSchema = z.object({
+  name: z.string().min(1, { message: 'Name is required' }),
+  email: z.string().email({ message: 'Invalid email address' }),
+  password: z.string().min(8, { message: 'Password must be at least 8 characters' }),
+});
 
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    
     // Validate input
-    if (!name || !email || !password) {
+    const result = userSchema.safeParse(body);
+    if (!result.success) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Validation error', details: result.error.errors },
         { status: 400 }
       );
     }
-
-    // Connect to the database
-    await connectToDB();
-
+    
+    const { name, email, password } = result.data;
+    
+    // Connect to database
+    try {
+      await connectToDatabase();
+    } catch (dbError) {
+      console.error('Database connection error:', dbError);
+      return NextResponse.json(
+        { error: 'Database connection failed' },
+        { status: 500 }
+      );
+    }
+    
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return NextResponse.json(
-        { error: 'User already exists' },
+        { error: 'User with this email already exists' },
         { status: 409 }
       );
     }
-
+    
     // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
+    const hashedPassword = await bcrypt.hash(password, 12);
+    
     // Create new user
-    const newUser = await User.create({
+    const user = await User.create({
       name,
       email,
       password: hashedPassword,
+      image: '',
+      workspaces: [],
+      createdAt: new Date(),
     });
-
-    // Return success response (excluding password)
+    
+    // Return success response without sensitive data
     return NextResponse.json(
-      {
+      { 
         message: 'User created successfully',
-        user: {
-          id: newUser._id,
-          name: newUser.name,
-          email: newUser.email,
-        },
+        user: { id: user._id.toString(), name: user.name, email: user.email }
       },
       { status: 201 }
     );
   } catch (error) {
-    console.error('Error creating user:', error);
+    console.error('Signup error:', error);
     return NextResponse.json(
-      { error: 'Failed to create user' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }

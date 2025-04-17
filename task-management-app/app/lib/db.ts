@@ -1,10 +1,12 @@
 import { MongoClient } from 'mongodb';
+import mongoose from 'mongoose';
 
-// Переменная для хранения экземпляра подключения
+// Variables to cache connections
 let cachedClient: MongoClient | null = null;
 let cachedDb: any = null;
+let isConnected = false;
 
-// Получаем URI подключения из переменных окружения
+// Get connection URI from environment variables
 const uri = process.env.MONGODB_URI;
 
 if (!uri) {
@@ -13,29 +15,46 @@ if (!uri) {
   );
 }
 
-// Функция для подключения к MongoDB
+// Function to connect to MongoDB
 export async function connectToDatabase() {
-  // Если у нас уже есть подключение, возвращаем его
-  if (cachedClient && cachedDb) {
+  // If we already have a connection, return it
+  if (cachedClient && cachedDb && mongoose.connection.readyState === 1) {
     return { client: cachedClient, db: cachedDb };
   }
 
-  // Создаем новое подключение
-  const client = new MongoClient(uri!);
-  await client.connect();
-  
-  // Извлекаем имя базы данных из URI
-  const dbName = new URL(uri!).pathname.substring(1);
-  const db = client.db(dbName);
+  // Connect to MongoDB using mongoose
+  if (mongoose.connection.readyState !== 1) {
+    try {
+      await mongoose.connect(uri!);
+      isConnected = true;
+      console.log('MongoDB connected successfully');
+    } catch (error) {
+      console.error('MongoDB connection error:', error);
+      throw error;
+    }
+  }
 
-  // Кэшируем подключение
-  cachedClient = client;
-  cachedDb = db;
+  // Also connect with native MongoDB driver
+  try {
+    const client = new MongoClient(uri!);
+    await client.connect();
+    
+    // Extract database name from URI
+    const dbName = new URL(uri!).pathname.substring(1);
+    const db = client.db(dbName);
 
-  return { client, db };
+    // Cache the connection
+    cachedClient = client;
+    cachedDb = db;
+
+    return { client, db };
+  } catch (error) {
+    console.error('Native MongoDB client connection error:', error);
+    throw error;
+  }
 }
 
-// Типы данных для коллекций
+// Types for collections
 export interface ProjectDocument {
   _id: string;
   name: string;
