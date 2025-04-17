@@ -2,15 +2,14 @@ services:
   - type: web
     name: task-management-app
     env: node
+    plan: free
     buildCommand: cd task-management-app && npm install --legacy-peer-deps && npm run build
-    startCommand: cd task-management-app && npx next start -p 3000
+    startCommand: cd task-management-app && node server.js
     envVars:
       - key: NODE_ENV
         value: production
       - key: NODE_OPTIONS
         value: --max-old-space-size=4096
-      - key: PORT
-        value: 3000
       - key: MONGODB_URI
         sync: false
       - key: NEXTAUTH_SECRET

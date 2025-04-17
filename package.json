@@ -5,6 +5,6 @@
   "scripts": {
     "install": "cd task-management-app && npm install --legacy-peer-deps",
     "build": "cd task-management-app && NODE_OPTIONS=\"--max-old-space-size=4096\" npm run build",
-    "start": "cd task-management-app && PORT=3000 npm run start"
+    "start": "cd task-management-app && npm run start"
   }
 } 
