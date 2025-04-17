@@ -1,0 +1,10 @@
+{
+  "name": "task-management-app-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "install": "cd task-management-app && npm install --legacy-peer-deps",
+    "build": "cd task-management-app && npm run build",
+    "start": "cd task-management-app && npm start"
+  }
+} 

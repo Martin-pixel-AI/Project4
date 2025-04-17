@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: task-management-app
+    env: node
+    buildCommand: npm install --legacy-peer-deps && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production 
