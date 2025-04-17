@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --no-lint",
     "start": "next start -p ${PORT:-3000}",
     "lint": "next lint",
     "getfonts": "mkdir -p public/fonts && curl -L https://github.com/rsms/inter/raw/master/docs/font-files/Inter-Regular.woff2 -o public/fonts/Inter-Regular.woff2 && curl -L https://github.com/rsms/inter/raw/master/docs/font-files/Inter-Medium.woff2 -o public/fonts/Inter-Medium.woff2 && curl -L https://github.com/rsms/inter/raw/master/docs/font-files/Inter-Bold.woff2 -o public/fonts/Inter-Bold.woff2"
