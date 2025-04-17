@@ -4,7 +4,7 @@ services:
     env: node
     plan: free
     buildCommand: cd task-management-app && npm install --legacy-peer-deps && npm run build
-    startCommand: cd task-management-app && node express-server.js
+    startCommand: cd task-management-app && PORT=10000 NODE_ENV=production node express-server.js
     healthCheckPath: /health
     autoDeploy: false
     envVars:
