@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, Suspense } from 'react';
 import { 
   Clock, 
   CheckSquare, 
@@ -11,7 +11,8 @@ import {
   Users
 } from 'lucide-react';
 
-export default function Dashboard() {
+// Компонент с контентом дашборда
+function DashboardContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
@@ -229,5 +230,16 @@ export default function Dashboard() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Экспортируем компонент с Suspense
+export default function Dashboard() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center h-full">
+      <div className="w-8 h-8 border-t-2 border-b-2 border-blue-500 rounded-full animate-spin"></div>
+    </div>}>
+      <DashboardContent />
+    </Suspense>
   );
 } 

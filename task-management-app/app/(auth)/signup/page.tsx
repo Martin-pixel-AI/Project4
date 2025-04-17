@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-export default function SignUp() {
+// Основной компонент формы
+function SignUpForm() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -143,5 +144,14 @@ export default function SignUp() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Экспортируем компонент с Suspense
+export default function SignUp() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+      <SignUpForm />
+    </Suspense>
   );
 } 

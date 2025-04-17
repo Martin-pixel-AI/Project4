@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 
-export default function SignIn() {
+// Компонент с хуком useSearchParams
+function SignInForm() {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -141,5 +142,14 @@ export default function SignIn() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Экспортируем основной компонент, обернутый в Suspense
+export default function SignIn() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+      <SignInForm />
+    </Suspense>
   );
 } 
