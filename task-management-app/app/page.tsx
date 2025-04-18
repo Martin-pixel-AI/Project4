@@ -1,9 +1,33 @@
+'use client';
+
 import Link from 'next/link';
 import { LayoutDashboard, CheckCircle, Calendar, Users, MessageSquare } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 export default function Home() {
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Проверка загрузки компонентов и зависимостей
+    try {
+      // Логирование для отладки
+      console.log('Home компонент загружен');
+    } catch (err) {
+      console.error('Ошибка в Home компоненте:', err);
+      setError(err instanceof Error ? err.message : 'Неизвестная ошибка');
+    }
+  }, []);
+
   return (
     <div className="flex flex-col min-h-screen">
+      {/* Отладочная информация */}
+      {error && (
+        <div className="bg-red-100 p-4 border border-red-400 text-red-700 mb-4">
+          <h3 className="font-bold">Ошибка:</h3>
+          <p>{error}</p>
+        </div>
+      )}
+
       {/* Header */}
       <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b">
         <div className="container flex items-center justify-between px-4 py-4 mx-auto sm:px-6 lg:px-8">
@@ -57,7 +81,7 @@ export default function Home() {
                 Get Started
               </Link>
               <Link
-                href="#demo"
+                href="/demo"
                 className="px-8 py-3 text-base font-medium text-blue-600 border border-blue-600 rounded-md hover:bg-blue-50 md:py-4 md:text-lg md:px-10"
               >
                 See Demo
@@ -140,6 +164,51 @@ export default function Home() {
               <p className="mt-2 text-base text-center text-gray-600">
                 Enjoy a smooth experience on any device with our responsive, modern UI.
               </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Demo section */}
+      <section id="demo" className="py-20 bg-gray-100">
+        <div className="container px-4 mx-auto sm:px-6 lg:px-8">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl mb-4">
+                See TaskFlow in action
+              </h2>
+              <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+                Watch how easy it is to manage projects, track tasks, and collaborate with your team.
+              </p>
+            </div>
+            
+            <div className="bg-white shadow-lg rounded-lg overflow-hidden">
+              <div className="aspect-w-16 aspect-h-9 bg-gray-200 flex items-center justify-center">
+                <div className="text-center p-8">
+                  <div className="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-medium text-gray-900 mb-2">Демо видео</h3>
+                  <p className="text-gray-600">Нажмите для просмотра демонстрации платформы TaskFlow</p>
+                </div>
+              </div>
+              <div className="p-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  Упростите управление задачами
+                </h3>
+                <p className="text-gray-600 mb-4">
+                  TaskFlow предоставляет полный набор инструментов для эффективного управления проектами любой сложности.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">Управление задачами</span>
+                  <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">Командная работа</span>
+                  <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm">Отчеты</span>
+                  <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm">Аналитика</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>

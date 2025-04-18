@@ -4,7 +4,28 @@ import bcrypt from 'bcrypt';
 import { connectToDatabase } from '../../../lib/db';
 import User from '../../../models/user';
 import { JWT } from 'next-auth/jwt';
-import { Session } from 'next-auth';
+import { Session, DefaultSession } from 'next-auth';
+
+// Расширение типа для User в NextAuth
+declare module "next-auth" {
+  interface User {
+    isDemoUser?: boolean;
+  }
+  
+  interface Session {
+    user: {
+      id: string;
+      isDemoUser?: boolean;
+    } & DefaultSession["user"]
+  }
+}
+
+// Расширение типа для JWT в NextAuth
+declare module "next-auth/jwt" {
+  interface JWT {
+    isDemoUser?: boolean;
+  }
+}
 
 const handler = NextAuth({
   providers: [
@@ -52,6 +73,22 @@ const handler = NextAuth({
         }
       },
     }),
+    // Демо-провайдер для входа без регистрации
+    CredentialsProvider({
+      id: 'demo',
+      name: 'Demo',
+      credentials: {},
+      async authorize() {
+        // Создаем демо-пользователя с фиксированными данными
+        return {
+          id: 'demo-user-id',
+          name: 'Demo User',
+          email: 'demo@example.com',
+          image: '',
+          isDemoUser: true,
+        };
+      },
+    }),
     // Add more providers here as needed (Google, GitHub, etc.)
   ],
   session: {
@@ -62,12 +99,20 @@ const handler = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        // Сохраняем признак демо-пользователя
+        if (user.isDemoUser) {
+          token.isDemoUser = true;
+        }
       }
       return token;
     },
     async session({ session, token }) {
       if (token && session.user) {
-        session.user.id = token.id;
+        session.user.id = token.id as string;
+        // Добавляем признак демо-пользователя в сессию
+        if (token.isDemoUser) {
+          session.user.isDemoUser = true;
+        }
       }
       return session;
     },

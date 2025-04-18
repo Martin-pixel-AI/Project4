@@ -1,5 +1,7 @@
 const express = require('express');
 const next = require('next');
+const path = require('path');
+const fs = require('fs');
 
 // Логирование при старте для отладки
 console.log('Starting express-server.js...');
@@ -10,17 +12,37 @@ const dev = process.env.NODE_ENV !== 'production';
 const port = process.env.PORT || 10000;
 
 console.log(`Will bind to port: ${port}`);
+console.log(`Development mode: ${dev}`);
 
 // Создаем сервер Express сразу
 const server = express();
 
+// Добавляем обработчик статических файлов
+server.use(express.static(path.join(__dirname, 'public')));
+server.use(express.static(__dirname));
+
 // Важный эндпоинт для проверки работоспособности на Render
 server.get('/health', (req, res) => {
+  console.log('Health check endpoint accessed');
   res.status(200).send('OK');
+});
+
+// Отладочный эндпоинт
+server.get('/debug', (req, res) => {
+  console.log('Debug endpoint accessed');
+  const debugInfo = {
+    nodeVersion: process.version,
+    env: process.env.NODE_ENV || 'not set',
+    nextExists: fs.existsSync(path.join(__dirname, '.next')),
+    currentDirectory: __dirname,
+    files: fs.readdirSync(__dirname)
+  };
+  res.json(debugInfo);
 });
 
 // Резервный обработчик для всех запросов при неудачной инициализации Next.js
 server.get('*', (req, res) => {
+  console.log(`Request received: ${req.url}`);
   res.send('Server is starting, please wait...');
 });
 
@@ -45,6 +67,7 @@ server.listen(port, '0.0.0.0', (err) => {
       server._router.stack.pop(); // Удаляем временный wildcard обработчик
       
       server.all('*', (req, res) => {
+        console.log(`Handling request with Next.js: ${req.url}`);
         return handle(req, res);
       });
       

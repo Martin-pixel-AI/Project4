@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { 
@@ -12,7 +12,9 @@ import {
   AlertTriangle,
   Calendar,
   User,
-  Tag 
+  Tag,
+  Trash,
+  Edit,
 } from 'lucide-react';
 import useProjectStore from '../../store/useProjectStore';
 import useTaskStore, { Task, TaskStatus, TaskPriority } from '../../store/useTaskStore';
@@ -102,9 +104,28 @@ interface ProjectColumnProps {
   tasks: Task[];
   onTaskClick: (task: Task) => void;
   onAddTask: (projectId: string) => void;
+  onRenameProject: (projectId: string) => void;
+  onDeleteProject: (projectId: string) => void;
 }
 
-function ProjectColumn({ project, tasks, onTaskClick, onAddTask }: ProjectColumnProps) {
+function ProjectColumn({ project, tasks, onTaskClick, onAddTask, onRenameProject, onDeleteProject }: ProjectColumnProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Закрыть меню при клике вне его
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   return (
     <div className="flex flex-col w-80 bg-gray-100 rounded shadow-sm">
       {/* Заголовок проекта */}
@@ -116,9 +137,41 @@ function ProjectColumn({ project, tasks, onTaskClick, onAddTask }: ProjectColumn
             {tasks.length}
           </span>
         </div>
-        <button className="text-gray-500 hover:text-gray-700">
-          <MoreHorizontal className="w-5 h-5" />
-        </button>
+        <div className="relative" ref={menuRef}>
+          <button 
+            className="text-gray-500 hover:text-gray-700 focus:outline-none"
+            onClick={() => setMenuOpen(!menuOpen)}
+          >
+            <MoreHorizontal className="w-5 h-5" />
+          </button>
+          
+          {menuOpen && (
+            <div className="absolute right-0 z-10 w-48 mt-2 origin-top-right bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5">
+              <div className="py-1">
+                <button
+                  className="flex items-center w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onRenameProject(project.id);
+                  }}
+                >
+                  <Edit className="w-4 h-4 mr-2" />
+                  Переименовать проект
+                </button>
+                <button
+                  className="flex items-center w-full px-4 py-2 text-sm text-left text-red-600 hover:bg-gray-100"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onDeleteProject(project.id);
+                  }}
+                >
+                  <Trash className="w-4 h-4 mr-2" />
+                  Удалить проект
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Задачи */}
@@ -332,7 +385,7 @@ export default function ProjectsPage() {
   const router = useRouter();
   const projectStore = useProjectStore();
   const taskStore = useTaskStore();
-  const { projects, fetchProjects, addProject } = projectStore;
+  const { projects, fetchProjects, addProject, updateProject, deleteProject } = projectStore;
   const { tasks, fetchTasks, addTask, updateTask } = taskStore;
   
   // Состояние для модальных окон и выбранной задачи
@@ -346,6 +399,15 @@ export default function ProjectsPage() {
     status: 'todo' as TaskStatus,
     priority: 'medium' as TaskPriority
   });
+  
+  // Добавляем состояния для редактирования проекта
+  const [isRenameProjectModalOpen, setIsRenameProjectModalOpen] = useState(false);
+  const [projectToRename, setProjectToRename] = useState<string | null>(null);
+  const [projectNewName, setProjectNewName] = useState('');
+  
+  // Добавляем состояние для подтверждения удаления проекта
+  const [isDeleteProjectModalOpen, setIsDeleteProjectModalOpen] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState<string | null>(null);
 
   // Загрузка данных при монтировании компонента
   useEffect(() => {
@@ -439,6 +501,49 @@ export default function ProjectsPage() {
     }
   };
 
+  // Обработчик переименования проекта
+  const handleRenameProject = (projectId: string) => {
+    const project = projects.find(p => p.id === projectId);
+    if (project) {
+      setProjectToRename(projectId);
+      setProjectNewName(project.name);
+      setIsRenameProjectModalOpen(true);
+    }
+  };
+  
+  // Обработчик подтверждения переименования проекта
+  const handleConfirmRename = async () => {
+    if (!projectToRename || !projectNewName.trim()) return;
+    
+    try {
+      await updateProject(projectToRename, { name: projectNewName });
+      setIsRenameProjectModalOpen(false);
+      setProjectToRename(null);
+      setProjectNewName('');
+    } catch (error) {
+      console.error('Ошибка при переименовании проекта:', error);
+    }
+  };
+  
+  // Обработчик удаления проекта
+  const handleDeleteProject = (projectId: string) => {
+    setProjectToDelete(projectId);
+    setIsDeleteProjectModalOpen(true);
+  };
+  
+  // Обработчик подтверждения удаления проекта
+  const handleConfirmDelete = async () => {
+    if (!projectToDelete) return;
+    
+    try {
+      await deleteProject(projectToDelete);
+      setIsDeleteProjectModalOpen(false);
+      setProjectToDelete(null);
+    } catch (error) {
+      console.error('Ошибка при удалении проекта:', error);
+    }
+  };
+
   if (status === 'loading') {
     return (
       <div className="flex items-center justify-center h-full">
@@ -490,6 +595,8 @@ export default function ProjectsPage() {
             tasks={getTasksByProject(project.id)}
             onTaskClick={handleTaskClick}
             onAddTask={handleAddTask}
+            onRenameProject={handleRenameProject}
+            onDeleteProject={handleDeleteProject}
           />
         ))}
         
@@ -614,6 +721,84 @@ export default function ProjectsPage() {
                 onClick={handleCreateTask}
               >
                 Создать
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Модальное окно переименования проекта */}
+      {isRenameProjectModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="w-full max-w-md p-6 bg-white rounded-lg shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium">Переименовать проект</h3>
+              <button
+                onClick={() => setIsRenameProjectModalOpen(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="mb-4">
+              <label className="block mb-2 text-sm font-medium text-gray-700">
+                Название проекта
+              </label>
+              <input
+                type="text"
+                className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={projectNewName}
+                onChange={(e) => setProjectNewName(e.target.value)}
+                placeholder="Введите название проекта"
+              />
+            </div>
+            <div className="flex justify-end">
+              <button
+                className="px-4 py-2 mr-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300"
+                onClick={() => setIsRenameProjectModalOpen(false)}
+              >
+                Отмена
+              </button>
+              <button
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                onClick={handleConfirmRename}
+                disabled={!projectNewName.trim()}
+              >
+                Сохранить
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Модальное окно подтверждения удаления проекта */}
+      {isDeleteProjectModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="w-full max-w-md p-6 bg-white rounded-lg shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium">Удаление проекта</h3>
+              <button
+                onClick={() => setIsDeleteProjectModalOpen(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="mb-4">
+              Вы уверены, что хотите удалить этот проект? Это действие нельзя отменить.
+            </p>
+            <div className="flex justify-end">
+              <button
+                className="px-4 py-2 mr-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300"
+                onClick={() => setIsDeleteProjectModalOpen(false)}
+              >
+                Отмена
+              </button>
+              <button
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
+                onClick={handleConfirmDelete}
+              >
+                Удалить
               </button>
             </div>
           </div>

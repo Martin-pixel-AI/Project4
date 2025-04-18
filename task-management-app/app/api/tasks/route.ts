@@ -3,19 +3,34 @@ import { getServerSession } from 'next-auth';
 import { connectToDatabase } from '@/app/lib/db';
 import { ObjectId } from 'mongodb';
 
-// MongoDB задача интерфейс
+// Интерфейсы для типизации
 interface TaskDocument {
   _id: ObjectId;
   title: string;
-  description: string;
+  description?: string;
   status: string;
   priority: string;
-  dueDate?: Date;
-  assignee?: string;
-  projectIds?: string[];
+  dueDate?: Date | null;
+  assignee?: string | null;
+  projectIds: string[];
+  userId: string;
   isCompleted: boolean;
   tags?: string[];
-  userId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  status: string;
+  priority: string;
+  dueDate?: Date | null;
+  assignee?: string | null;
+  projectIds: string[];
+  isCompleted: boolean;
+  tags?: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -30,20 +45,29 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
+    // Если это демо-пользователь, возвращаем демо-задачи
+    if (session.user.isDemoUser) {
+      console.log('Returning demo tasks for demo user');
+      return NextResponse.json(getDemoTasks());
+    }
+    
     const { db } = await connectToDatabase();
+    
+    // Определяем пользовательский идентификатор
+    const userId = session.user.email || 'anonymous';
     
     // Получаем задачи пользователя
     const tasks = await db
       .collection('tasks')
-      .find({ userId: session.user.email }) // Используем email как идентификатор пользователя
+      .find({ userId }) // Фильтруем по ID пользователя
       .sort({ updatedAt: -1 }) // Сортируем по дате обновления
       .toArray();
     
     // Преобразуем _id в id для фронтенда
-    const formattedTasks = tasks.map((task: TaskDocument) => ({
+    const formattedTasks = tasks.map((task: TaskDocument): Task => ({
       id: task._id.toString(),
       title: task.title,
-      description: task.description,
+      description: task.description || '',
       status: task.status,
       priority: task.priority,
       dueDate: task.dueDate,
@@ -75,6 +99,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
+    // Если это демо-пользователь, имитируем создание задачи
+    if (session.user.isDemoUser) {
+      const data = await req.json();
+      const demoTask: Task = {
+        id: `demo-task-${Date.now()}`,
+        title: data.title,
+        description: data.description || '',
+        status: data.status || 'todo',
+        priority: data.priority || 'medium',
+        dueDate: data.dueDate || null,
+        assignee: data.assignee || null,
+        projectIds: data.projectIds || [],
+        isCompleted: false,
+        tags: data.tags || [],
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      
+      return NextResponse.json(demoTask);
+    }
+    
     // Получаем данные из запроса
     const data = await req.json();
     
@@ -88,11 +133,8 @@ export async function POST(req: NextRequest) {
     
     const { db } = await connectToDatabase();
     
-    // Преобразуем строку даты в объект Date, если она есть
-    let dueDate = data.dueDate;
-    if (dueDate && typeof dueDate === 'string') {
-      dueDate = new Date(dueDate);
-    }
+    // Определяем пользовательский идентификатор
+    const userId = session.user.email || 'anonymous';
     
     // Создаем объект задачи
     const now = new Date();
@@ -101,12 +143,12 @@ export async function POST(req: NextRequest) {
       description: data.description || '',
       status: data.status || 'todo',
       priority: data.priority || 'medium',
-      dueDate: dueDate,
-      assignee: data.assignee || session.user.email,
-      projectIds: Array.isArray(data.projectIds) ? data.projectIds : [],
-      isCompleted: data.isCompleted || false,
-      tags: Array.isArray(data.tags) ? data.tags : [],
-      userId: session.user.email,
+      dueDate: data.dueDate || null,
+      assignee: data.assignee || null,
+      projectIds: data.projectIds || [],
+      isCompleted: false,
+      tags: data.tags || [],
+      userId: userId,
       createdAt: now,
       updatedAt: now
     };
@@ -120,7 +162,7 @@ export async function POST(req: NextRequest) {
         try {
           const project = await db.collection('projects').findOne({
             _id: new ObjectId(projectId),
-            userId: session.user.email
+            userId: userId
           });
 
           if (project) {
@@ -154,4 +196,99 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+// Функция для получения демо-задач
+function getDemoTasks(): Task[] {
+  const now = new Date();
+  const oneDay = 24 * 60 * 60 * 1000;
+  const threeDays = 3 * oneDay;
+  
+  // Демо-задачи
+  return [
+    {
+      id: 'demo-task-1',
+      title: 'Создать дизайн главной страницы',
+      description: 'Разработать макет главной страницы сайта с учетом требований пользователей',
+      status: 'in-progress',
+      priority: 'high',
+      dueDate: new Date(now.getTime() + oneDay),
+      assignee: 'Вы',
+      projectIds: ['demo-project-1'],
+      isCompleted: false,
+      tags: ['дизайн', 'UI/UX'],
+      createdAt: new Date(now.getTime() - threeDays),
+      updatedAt: now
+    },
+    {
+      id: 'demo-task-2',
+      title: 'Настроить сборку проекта',
+      description: 'Настроить webpack и babel для сборки проекта',
+      status: 'todo',
+      priority: 'medium',
+      dueDate: new Date(now.getTime() + 2 * oneDay),
+      assignee: 'Вы',
+      projectIds: ['demo-project-1'],
+      isCompleted: false,
+      tags: ['webpack', 'development'],
+      createdAt: new Date(now.getTime() - 2 * oneDay),
+      updatedAt: now
+    },
+    {
+      id: 'demo-task-3',
+      title: 'Написать unit-тесты',
+      description: 'Создать тесты для основных компонентов приложения',
+      status: 'todo',
+      priority: 'low',
+      dueDate: new Date(now.getTime() + 5 * oneDay),
+      assignee: 'Вы',
+      projectIds: ['demo-project-1'],
+      isCompleted: false,
+      tags: ['testing', 'development'],
+      createdAt: new Date(now.getTime() - oneDay),
+      updatedAt: now
+    },
+    {
+      id: 'demo-task-4',
+      title: 'Создать контент-план',
+      description: 'Разработать план публикаций в социальных сетях на месяц',
+      status: 'in-progress',
+      priority: 'high',
+      dueDate: new Date(now.getTime() + oneDay),
+      assignee: 'Мария',
+      projectIds: ['demo-project-2'],
+      isCompleted: false,
+      tags: ['content', 'marketing'],
+      createdAt: new Date(now.getTime() - 4 * oneDay),
+      updatedAt: now
+    },
+    {
+      id: 'demo-task-5',
+      title: 'Проанализировать конкурентов',
+      description: 'Изучить стратегии конкурентов и определить сильные и слабые стороны',
+      status: 'done',
+      priority: 'medium',
+      dueDate: new Date(now.getTime() - oneDay),
+      assignee: 'Алексей',
+      projectIds: ['demo-project-2'],
+      isCompleted: true,
+      tags: ['analysis', 'strategy'],
+      createdAt: new Date(now.getTime() - 7 * oneDay),
+      updatedAt: new Date(now.getTime() - oneDay)
+    },
+    {
+      id: 'demo-task-6',
+      title: 'Купить продукты',
+      description: 'Молоко, хлеб, фрукты, овощи',
+      status: 'todo',
+      priority: 'medium',
+      dueDate: new Date(now.getTime() + oneDay),
+      assignee: 'Вы',
+      projectIds: ['demo-project-3'],
+      isCompleted: false,
+      tags: ['personal'],
+      createdAt: new Date(now.getTime() - 0.5 * oneDay),
+      updatedAt: now
+    }
+  ];
 } 

@@ -25,12 +25,21 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
+    // Если это демо-пользователь, сразу возвращаем демо-проекты
+    if (session.user.isDemoUser) {
+      console.log('Returning demo projects for demo user');
+      return NextResponse.json(getDemoProjects());
+    }
+    
     const { db } = await connectToDatabase();
+    
+    // Определяем пользовательский идентификатор
+    const userId = session.user.email || 'anonymous';
     
     // Получаем проекты пользователя
     const projects = await db
       .collection('projects')
-      .find({ userId: session.user.email }) // Используем email как идентификатор пользователя
+      .find({ userId: userId }) // Используем email как идентификатор пользователя
       .sort({ updatedAt: -1 }) // Сортируем по дате обновления
       .toArray();
     
@@ -65,6 +74,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
+    // Для демо-пользователя имитируем успешное создание, но не сохраняем в БД
+    if (session.user.isDemoUser) {
+      const data = await req.json();
+      const demoProject = {
+        id: `demo-project-${Date.now()}`,
+        name: data.name,
+        description: data.description || '',
+        color: data.color || 'blue',
+        tasks: [],
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      
+      return NextResponse.json(demoProject);
+    }
+    
     // Получаем данные из запроса
     const data = await req.json();
     
@@ -78,6 +103,9 @@ export async function POST(req: NextRequest) {
     
     const { db } = await connectToDatabase();
     
+    // Определяем пользовательский идентификатор
+    const userId = session.user.email || 'anonymous';
+    
     // Создаем объект проекта
     const now = new Date();
     const project = {
@@ -85,7 +113,7 @@ export async function POST(req: NextRequest) {
       description: data.description || '',
       color: data.color || 'blue',
       tasks: [],
-      userId: session.user.email,
+      userId: userId,
       createdAt: now,
       updatedAt: now
     };
@@ -105,4 +133,42 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+// Функция для получения демо-проектов
+function getDemoProjects() {
+  const now = new Date();
+  
+  // Демо-проекты с уникальными ID
+  const demoProjects = [
+    {
+      id: 'demo-project-1',
+      name: 'Веб-разработка',
+      description: 'Проект веб-разработки для демонстрационных целей',
+      color: 'blue',
+      tasks: ['demo-task-1', 'demo-task-2', 'demo-task-3'],
+      createdAt: now,
+      updatedAt: now
+    },
+    {
+      id: 'demo-project-2',
+      name: 'Маркетинг',
+      description: 'Маркетинговые задачи и проекты',
+      color: 'green',
+      tasks: ['demo-task-4', 'demo-task-5'],
+      createdAt: now,
+      updatedAt: now
+    },
+    {
+      id: 'demo-project-3',
+      name: 'Личные задачи',
+      description: 'Личные задачи и планы',
+      color: 'purple',
+      tasks: ['demo-task-6'],
+      createdAt: now,
+      updatedAt: now
+    }
+  ];
+  
+  return demoProjects;
 } 

@@ -17,12 +17,15 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
+    // Определяем пользовательский идентификатор
+    const userId = session.user.isDemoUser ? 'demo@example.com' : (session.user.email || 'anonymous');
+    
     const { db } = await connectToDatabase();
     
     // Ищем задачу по ID
     const task = await db.collection('tasks').findOne({
       _id: new ObjectId(id),
-      userId: session.user.email
+      userId: userId
     });
     
     if (!task) {
@@ -67,6 +70,9 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
+    // Определяем пользовательский идентификатор
+    const userId = session.user.isDemoUser ? 'demo@example.com' : (session.user.email || 'anonymous');
+    
     // Получаем данные из запроса
     const data = await req.json();
     
@@ -75,7 +81,7 @@ export async function PUT(
     // Проверяем существование задачи и права доступа
     const existingTask = await db.collection('tasks').findOne({
       _id: new ObjectId(id),
-      userId: session.user.email
+      userId: userId
     });
     
     if (!existingTask) {
@@ -141,7 +147,7 @@ export async function PUT(
         try {
           const project = await db.collection('projects').findOne({
             _id: new ObjectId(projectId),
-            userId: session.user.email
+            userId: userId
           });
           
           if (project) {
@@ -208,12 +214,15 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
+    // Определяем пользовательский идентификатор
+    const userId = session.user.isDemoUser ? 'demo@example.com' : (session.user.email || 'anonymous');
+    
     const { db } = await connectToDatabase();
     
     // Проверяем существование задачи и права доступа
     const existingTask = await db.collection('tasks').findOne({
       _id: new ObjectId(id),
-      userId: session.user.email
+      userId: userId
     });
     
     if (!existingTask) {

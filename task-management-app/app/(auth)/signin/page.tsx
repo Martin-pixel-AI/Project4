@@ -13,6 +13,7 @@ function SignInForm() {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(false);
   const [message, setMessage] = useState('');
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -59,6 +60,33 @@ function SignInForm() {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Функция для демо-входа
+  const handleDemoSignIn = async () => {
+    setError('');
+    setDemoLoading(true);
+
+    try {
+      const result = await signIn('demo', {
+        redirect: false,
+      });
+
+      if (result?.error) {
+        throw new Error(result.error || 'Demo login failed');
+      }
+
+      // Redirect to dashboard on successful demo sign-in
+      router.push('/dashboard');
+    } catch (error) {
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('Failed to sign in with demo account');
+      }
+    } finally {
+      setDemoLoading(false);
     }
   };
 
@@ -131,6 +159,20 @@ function SignInForm() {
             </button>
           </div>
         </form>
+
+        {/* Кнопка Демо-режима */}
+        <div className="mt-4">
+          <button
+            onClick={handleDemoSignIn}
+            disabled={demoLoading}
+            className="flex justify-center w-full px-4 py-2 text-sm font-medium text-blue-600 bg-white border border-blue-600 rounded-md shadow-sm hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {demoLoading ? 'Loading Demo...' : 'See Demo'}
+          </button>
+          <p className="mt-1 text-xs text-center text-gray-500">
+            Try the platform without creating an account
+          </p>
+        </div>
 
         <div className="text-center">
           <p className="text-sm text-gray-600">
